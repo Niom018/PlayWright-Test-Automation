@@ -30,12 +30,19 @@ export class AdminService extends BaseService {
   async activateAgent(agentEmail: string): Promise<void> {
     await this.goto('/admin/users');
 
-    // The list is sorted newest-first, so a freshly registered agent
-    // always lands on the first page — avoids needing the exact
-    // interaction pattern of the "Search Type" dropdown.
+    // This is a shared practice platform — other students register test
+    // agents concurrently, so a freshly-registered agent isn't reliably on
+    // page 1 (that assumption caused real CI failures). Use the actual
+    // search feature instead: open "Search Type", pick "Search by Email",
+    // type the email, and click Search.
+    await this.page.getByRole('combobox').click();
+    await this.page.getByRole('option', { name: 'Search by Email', exact: false }).click();
+
+    await this.fillByLabel('Enter Email', agentEmail);
+    await this.clickByRole('button', 'Search');
+
     const agentRow = this.page.getByRole('row', { name: agentEmail, exact: false });
     await agentRow.getByRole('button', { name: 'View', exact: false }).click();
-
     await this.clickByRole('button', 'Edit User');
 
     // "Account Status" isn't programmatically linked to its combobox, and
