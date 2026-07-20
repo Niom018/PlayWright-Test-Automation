@@ -35,7 +35,12 @@ export class AdminService extends BaseService {
     // page 1 (that assumption caused real CI failures). Use the actual
     // search feature instead: open "Search Type", pick "Search by Email",
     // type the email, and click Search.
-    await this.page.getByRole('combobox').click();
+    //
+    // Note: this page has two comboboxes once pagination shows up —
+    // "Search Type" (top) and "Rows per page" (pagination footer, bottom).
+    // Search Type always renders first in the DOM, so .first() reliably
+    // grabs the right one.
+    await this.page.getByRole('combobox').first().click();
     await this.page.getByRole('option', { name: 'Search by Email', exact: false }).click();
 
     await this.fillByLabel('Enter Email', agentEmail);
@@ -43,6 +48,7 @@ export class AdminService extends BaseService {
 
     const agentRow = this.page.getByRole('row', { name: agentEmail, exact: false });
     await agentRow.getByRole('button', { name: 'View', exact: false }).click();
+
     await this.clickByRole('button', 'Edit User');
 
     // "Account Status" isn't programmatically linked to its combobox, and
