@@ -10,7 +10,36 @@ export class BaseService {
 
   async goto(path: string): Promise<void> {
     await this.page.goto(path);
-  }
+    await this.waitOutCloudflareChallengeIfPresent();
+}
+
+/**
+ * The target site is behind Cloudflare, which occasionally challenges
+ * automated sessions with a "Performing security verification"
+ * interstitial — seen specifically on /admin routes when run from CI's
+ * shared IP ranges. Some Cloudflare challenges auto-clear after a few
+ * seconds; give it a chance to before continuing, rather than letting
+ * whatever locator runs next sit and time out against a stuck challenge
+ * page with no explanation.
+ */
+private async waitOutCloudflareChallengeIfPresent(): Promise<void> {
+    const maxAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const challengeShown = await this.page
+        .getByText('Performing security verification', { exact: false })
+        .waitFor({ state: 'visible', timeout: 3_000 })
+        .then(() => true)
+        .catch(() => false);
+
+      if (!challengeShown) {
+        return;
+      }
+
+      await this.page.waitForTimeout(8_000);
+      await this.page.reload();
+    }
+}
 
   /**
    * Fills a field by its visible label, falling back to placeholder text.
