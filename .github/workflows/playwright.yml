@@ -39,6 +39,8 @@ jobs:
           GMAIL_BASE_EMAIL: ${{ secrets.GMAIL_BASE_EMAIL }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           EXISTING_CUSTOMER_PHONE: ${{ secrets.EXISTING_CUSTOMER_PHONE }}
+        # Run in a virtual display instead of headless mode, since headless
+        # Chromium's fingerprint differs from a real browser window.
         run: xvfb-run --auto-servernum npx playwright test --headed
 
       - name: Upload Playwright report
