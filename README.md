@@ -127,6 +127,12 @@ Playwright error snapshots — worth knowing if you extend this suite:
 - Verified locally with 3 consecutive full green runs (all 5 steps) before
   relying on it for submission.
 
+  ## Playwright Report
+
+The project generates an HTML report after every test execution.
+
+![Playwright HTML Report](Assets/Playwright-Report.png)
+
 ## Author
 
 Niamul Hasan — Road to SDET, Batch 18
