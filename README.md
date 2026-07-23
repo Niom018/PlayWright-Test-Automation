@@ -20,9 +20,10 @@ deposit to a customer.
 ## Why this needed an email-OTP solution
 
 The platform requires OTP verification (sent to a real Gmail inbox) during
-Agent/Customer/Merchant login. `utils/gmail-otp-reader.ts` connects to Gmail
-over IMAP and reads the code straight out of the inbox, so the whole flow
-runs unattended. See that file's comments for the full reasoning.
+Agent/Customer/Merchant signup and login. `utils/gmail-otp-reader.ts`
+connects to Gmail over IMAP and reads the code straight out of the inbox,
+so the whole flow runs unattended. See that file's comments for the full
+reasoning.
 
 ## Tech Stack
 
@@ -37,7 +38,7 @@ runs unattended. See that file's comments for the full reasoning.
 ├── services/                          # OOP layer — one class per role/concern
 │   ├── base.service.ts                #   shared Playwright actions
 │   ├── auth.service.ts                #   signup + login (any role, auto OTP)
-│   ├── admin.service.ts               #   agent activation
+│   ├── admin.service.ts               #   agent search + activation
 │   ├── system.service.ts              #   SYSTEM → agent deposit
 │   └── agent.service.ts               #   balance check + agent → customer deposit
 ├── tests/
@@ -73,11 +74,21 @@ runs unattended. See that file's comments for the full reasoning.
    ```bash
    npm test
    ```
+   Or with a visible browser window:
+   ```bash
+   npm run test:headed
+   ```
 
 4. View the HTML report:
    ```bash
    npm run report
    ```
+
+ ## Playwright Report
+
+The project generates an HTML report after every test execution.
+
+![Playwright HTML Report](Assets/Playwright-Report.png)
 
 ## CI/CD
 
@@ -106,8 +117,15 @@ Playwright error snapshots — worth knowing if you extend this suite:
 - **Agent activation has no direct "Activate" button** — the real flow is
   User List → View → Edit User → Account Status dropdown → Active → Save
   Changes.
-- **The User List is sorted newest-first**, so a just-registered agent is
-  reliably on page 1 without needing to drive the "Search Type" filter.
+- **The User List isn't reliably sorted for a fresh agent** — this is a
+  shared practice platform used by many students concurrently, so a
+  just-registered agent can get pushed off page 1 by other students'
+  activity between signup and activation. `activateAgent()` uses the
+  platform's real "Search by Email" feature instead of relying on sort
+  order or pagination.
+- **The User List page has two comboboxes once pagination appears**
+  ("Search Type" and "Rows per page") — locators need to disambiguate
+  between them (`.first()`, or filtering by current visible text).
 
 ## Known limitations
 
@@ -124,14 +142,18 @@ Playwright error snapshots — worth knowing if you extend this suite:
 - The global Playwright test timeout (180s) is intentionally well above
   `GmailOtpReader`'s own polling deadline (60s) so a slow-but-successful
   IMAP poll never gets cut off by the outer test timeout first.
-- Verified locally with 3 consecutive full green runs (all 5 steps) before
-  relying on it for submission.
-
-  ## Playwright Report
-
-The project generates an HTML report after every test execution.
-
-![Playwright HTML Report](Assets/Playwright-Report.png)
+- Verified locally with multiple consecutive full green runs (all 5 steps)
+  before relying on it for submission.
+- **CI/CD note:** the pipeline is fully configured and correctly automates
+  the entire flow (see `.github/workflows/playwright.yml`), but when run
+  from GitHub Actions' shared cloud IP ranges, the target platform's
+  Cloudflare bot-protection challenges requests to `/admin/*` routes —
+  confirmed consistently across multiple CI runs, including with a virtual
+  display (Xvfb) in headed mode to rule out headless-browser fingerprinting.
+  This is a third-party infrastructure constraint, not a defect in the test
+  suite — the same suite passes reliably every time when run locally.
+  Confirmed with the course instructor that a correctly configured workflow
+  file is sufficient for this submission.
 
 ## Author
 
@@ -142,5 +164,10 @@ Niamul Hasan — Road to SDET, Batch 18
 - [x] OOP structure (`services/` — one class per role/concern)
 - [x] `node_modules/` and `.env` excluded via `.gitignore`
 - [x] README documented
-- [ ] CI/CD screenshot attached (green GitHub Actions run)
-- [ ] Playwright HTML report summary screenshot attached
+- [x] CI/CD pipeline configured (`.github/workflows/playwright.yml`) —
+      blocked from producing a green run by the target platform's
+      Cloudflare protection on GitHub's shared IPs (documented above);
+      confirmed with instructor that a correctly configured workflow is
+      sufficient
+- [x] Playwright HTML report summary screenshot attached (local run, all
+      5 steps passing)
